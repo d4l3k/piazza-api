@@ -3,6 +3,7 @@ package piazza
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -120,6 +121,12 @@ type APIReq struct {
 	Params interface{} `json:"params"`
 }
 
+func (c *Client) setCookies(req *http.Request) {
+	for _, c := range c.Cookies() {
+		req.AddCookie(c)
+	}
+}
+
 func (c *Client) MakeAPIReq(method string, params interface{}, resp interface{}) error {
 	req := APIReq{
 		Method: method,
@@ -137,10 +144,8 @@ func (c *Client) MakeAPIReq(method string, params interface{}, resp interface{})
 	if err != nil {
 		return err
 	}
+	c.setCookies(httpReq)
 	httpReq.Header.Add("Content-Type", ContentType)
-	for _, c := range c.Cookies() {
-		httpReq.AddCookie(c)
-	}
 	httpResp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
 		return err
@@ -172,6 +177,187 @@ type EmailPrefs map[string]struct {
 	Updates    string      `json:"updates"`
 	NoEvents   bool        `json:"no_events"`
 	Throttle   int         `json:"throttle"`
+}
+
+// Network is a single one of the users network. For some reason this seems to
+// be a strangely named class object.
+type Network struct {
+	Anonymity string `json:"anonymity"`
+	AutoJoin  string `json:"auto_join"`
+	Config    struct {
+		ClassSections struct {
+			AllowEnroll int      `json:"allow_enroll"`
+			Sections    []string `json:"sections"`
+		} `json:"class_sections"`
+		DefaultPostsToPrivate bool `json:"default_posts_to_private"`
+		DisableFolders        bool `json:"disable_folders"`
+		DisableStudentPolls   bool `json:"disable_student_polls"`
+		DisableSyntax         bool `json:"disable_syntax"`
+		GetFamiliarNr         int  `json:"get_familiar_nr"`
+		HasWorkAt             int  `json:"has_work_at"`
+		IntroducePiazzaNr     int  `json:"introduce_piazza_nr"`
+		Onboard               struct {
+			AddInst int `json:"add_inst"`
+			AddStud int `json:"add_stud"`
+		} `json:"onboard"`
+		PublicVisibilitySettings struct {
+			Announcements    bool `json:"announcements"`
+			ResourceSections struct {
+				General           bool `json:"general"`
+				Homework          bool `json:"homework"`
+				HomeworkSolutions bool `json:"homework_solutions"`
+				LectureNotes      bool `json:"lecture_notes"`
+			} `json:"resource_sections"`
+		} `json:"public_visibility_settings"`
+		RegUserCount     int `json:"reg_user_count"`
+		ResourceSections []struct {
+			DateTitle  string `json:"date_title"`
+			HasDate    bool   `json:"has_date"`
+			Name       string `json:"name"`
+			Title      string `json:"title"`
+			Visibility bool   `json:"visibility"`
+		} `json:"resource_sections"`
+		Roles struct {
+			Admin struct {
+				AdminRoster             bool `json:"admin_roster"`
+				CanPostAnonymousAll     bool `json:"can_post_anonymous_all"`
+				CanPostAnonymousMembers bool `json:"can_post_anonymous_members"`
+				ExpertAnswerCreate      bool `json:"expert_answer_create"`
+				ExpertAnswerEdit        bool `json:"expert_answer_edit"`
+				ExpertAnswerEndorse     bool `json:"expert_answer_endorse"`
+				FollowupEdit            bool `json:"followup_edit"`
+				ManageFolders           bool `json:"manage_folders"`
+				ManageGroupInfo         bool `json:"manage_group_info"`
+				ManageGroups            bool `json:"manage_groups"`
+				ManageResources         bool `json:"manage_resources"`
+				MemberAnswerCreate      bool `json:"member_answer_create"`
+				MemberAnswerEdit        bool `json:"member_answer_edit"`
+				MemberAnswerEndorse     bool `json:"member_answer_endorse"`
+				MemberRoster            bool `json:"member_roster"`
+				NewFollowup             bool `json:"new_followup"`
+				NewPost                 bool `json:"new_post"`
+				QuestionDelete          bool `json:"question_delete"`
+				QuestionEdit            bool `json:"question_edit"`
+			} `json:"admin"`
+			Instructor struct {
+				AdminRoster         bool `json:"admin_roster"`
+				ExpertAnswerCreate  bool `json:"expert_answer_create"`
+				ExpertAnswerEdit    bool `json:"expert_answer_edit"`
+				ExpertAnswerEndorse bool `json:"expert_answer_endorse"`
+				FollowupEdit        bool `json:"followup_edit"`
+				ManageFolders       bool `json:"manage_folders"`
+				ManageGroupInfo     bool `json:"manage_group_info"`
+				ManageGroups        bool `json:"manage_groups"`
+				ManageResources     bool `json:"manage_resources"`
+				MemberAnswerEdit    bool `json:"member_answer_edit"`
+				MemberAnswerEndorse bool `json:"member_answer_endorse"`
+				MemberRoster        bool `json:"member_roster"`
+				NewFollowup         bool `json:"new_followup"`
+				NewPost             bool `json:"new_post"`
+				QuestionDelete      bool `json:"question_delete"`
+				QuestionEdit        bool `json:"question_edit"`
+			} `json:"instructor"`
+			Professor struct {
+				AdminRoster         bool `json:"admin_roster"`
+				ExpertAnswerCreate  bool `json:"expert_answer_create"`
+				ExpertAnswerEdit    bool `json:"expert_answer_edit"`
+				ExpertAnswerEndorse bool `json:"expert_answer_endorse"`
+				FollowupEdit        bool `json:"followup_edit"`
+				ManageFolders       bool `json:"manage_folders"`
+				ManageGroupInfo     bool `json:"manage_group_info"`
+				ManageGroups        bool `json:"manage_groups"`
+				ManageResources     bool `json:"manage_resources"`
+				MemberAnswerEdit    bool `json:"member_answer_edit"`
+				MemberAnswerEndorse bool `json:"member_answer_endorse"`
+				MemberRoster        bool `json:"member_roster"`
+				NewFollowup         bool `json:"new_followup"`
+				NewPost             bool `json:"new_post"`
+				QuestionDelete      bool `json:"question_delete"`
+				QuestionEdit        bool `json:"question_edit"`
+			} `json:"professor"`
+			Student struct {
+				CanPostAnonymousMembers bool `json:"can_post_anonymous_members"`
+				ExpertAnswerEndorse     bool `json:"expert_answer_endorse"`
+				MemberAnswerCreate      bool `json:"member_answer_create"`
+				MemberAnswerEdit        bool `json:"member_answer_edit"`
+				MemberAnswerEndorse     bool `json:"member_answer_endorse"`
+				NewFollowup             bool `json:"new_followup"`
+				NewPost                 bool `json:"new_post"`
+				QuestionEdit            bool `json:"question_edit"`
+			} `json:"student"`
+			Ta struct {
+				AdminRoster         bool `json:"admin_roster"`
+				ExpertAnswerCreate  bool `json:"expert_answer_create"`
+				ExpertAnswerEdit    bool `json:"expert_answer_edit"`
+				ExpertAnswerEndorse bool `json:"expert_answer_endorse"`
+				FollowupEdit        bool `json:"followup_edit"`
+				ManageFolders       bool `json:"manage_folders"`
+				ManageGroupInfo     bool `json:"manage_group_info"`
+				ManageGroups        bool `json:"manage_groups"`
+				ManageResources     bool `json:"manage_resources"`
+				MemberAnswerEdit    bool `json:"member_answer_edit"`
+				MemberAnswerEndorse bool `json:"member_answer_endorse"`
+				MemberRoster        bool `json:"member_roster"`
+				NewFollowup         bool `json:"new_followup"`
+				NewPost             bool `json:"new_post"`
+				QuestionDelete      bool `json:"question_delete"`
+				QuestionEdit        bool `json:"question_edit"`
+			} `json:"ta"`
+		} `json:"roles"`
+		SeenMessage  []string `json:"seen_message"`
+		TipsTricksNr int      `json:"tips_tricks_nr"`
+	} `json:"config"`
+	CourseDescription  string         `json:"course_description"`
+	CourseNumber       string         `json:"course_number"`
+	CreatedAt          string         `json:"created_at"`
+	CreatorName        string         `json:"creator_name"`
+	Department         string         `json:"department"`
+	EndDate            interface{}    `json:"end_date"`
+	Enrollment         interface{}    `json:"enrollment"`
+	Folders            []string       `json:"folders"`
+	GeneralInformation []interface{}  `json:"general_information"`
+	ID                 string         `json:"id"`
+	IsOpen             bool           `json:"isOpen"`
+	MyName             string         `json:"my_name"`
+	Name               string         `json:"name"`
+	OfficeHours        struct{}       `json:"office_hours"`
+	PrivatePosts       string         `json:"private_posts"`
+	ProfHash           map[string]int `json:"prof_hash"`
+	Profs              []struct {
+		Admin           bool        `json:"admin"`
+		AdminPermission int         `json:"admin_permission"`
+		ClassSections   []string    `json:"class_sections"`
+		Email           string      `json:"email"`
+		FacebookID      interface{} `json:"facebook_id"`
+		ID              string      `json:"id"`
+		Name            string      `json:"name"`
+		Photo           interface{} `json:"photo"`
+		Role            string      `json:"role"`
+		Us              bool        `json:"us"`
+	} `json:"profs"`
+	School           string        `json:"school"`
+	SchoolEmails     string        `json:"school_emails"`
+	SchoolExt        string        `json:"school_ext"`
+	SchoolID         string        `json:"school_id"`
+	SchoolShort      string        `json:"school_short"`
+	ShortNumber      string        `json:"short_number"`
+	SpecialTags      []interface{} `json:"special_tags"`
+	StartDate        string        `json:"start_date"`
+	Status           string        `json:"status"`
+	Syllabus         string        `json:"syllabus"`
+	Taxonomy         []interface{} `json:"taxonomy"`
+	Term             string        `json:"term"`
+	Topics           []string      `json:"topics"`
+	TotalContentProf int           `json:"total_content_prof"`
+	TotalContentStud int           `json:"total_content_stud"`
+	Type             string        `json:"type"`
+	UserCount        int           `json:"user_count"`
+}
+
+// ResourceURL returns the resource URL for the course.
+func (n Network) ResourceURL() string {
+	term := strings.ToLower(strings.Replace(n.Term, " ", "", -1))
+	return fmt.Sprintf("https://piazza.com/%s/%s/%s/home", n.SchoolExt, term, n.ShortNumber)
 }
 
 // UserStatus contains all the fields that the UserStatusAPI endpoint returns.
@@ -322,182 +508,11 @@ type UserStatus struct {
 			Users  int `json:"users"`
 			Users7 int `json:"users_7"`
 		} `json:"feed_prefetch"`
-		ID          string   `json:"id"`
-		LastContent struct{} `json:"last_content"`
-		LastNetwork string   `json:"last_network"`
-		Name        string   `json:"name"`
-		Networks    []struct {
-			Anonymity string `json:"anonymity"`
-			AutoJoin  string `json:"auto_join"`
-			Config    struct {
-				ClassSections struct {
-					AllowEnroll int      `json:"allow_enroll"`
-					Sections    []string `json:"sections"`
-				} `json:"class_sections"`
-				DefaultPostsToPrivate bool `json:"default_posts_to_private"`
-				DisableFolders        bool `json:"disable_folders"`
-				DisableStudentPolls   bool `json:"disable_student_polls"`
-				DisableSyntax         bool `json:"disable_syntax"`
-				GetFamiliarNr         int  `json:"get_familiar_nr"`
-				HasWorkAt             int  `json:"has_work_at"`
-				IntroducePiazzaNr     int  `json:"introduce_piazza_nr"`
-				Onboard               struct {
-					AddInst int `json:"add_inst"`
-					AddStud int `json:"add_stud"`
-				} `json:"onboard"`
-				PublicVisibilitySettings struct {
-					Announcements    bool `json:"announcements"`
-					ResourceSections struct {
-						General           bool `json:"general"`
-						Homework          bool `json:"homework"`
-						HomeworkSolutions bool `json:"homework_solutions"`
-						LectureNotes      bool `json:"lecture_notes"`
-					} `json:"resource_sections"`
-				} `json:"public_visibility_settings"`
-				RegUserCount     int `json:"reg_user_count"`
-				ResourceSections []struct {
-					DateTitle  string `json:"date_title"`
-					HasDate    bool   `json:"has_date"`
-					Name       string `json:"name"`
-					Title      string `json:"title"`
-					Visibility bool   `json:"visibility"`
-				} `json:"resource_sections"`
-				Roles struct {
-					Admin struct {
-						AdminRoster             bool `json:"admin_roster"`
-						CanPostAnonymousAll     bool `json:"can_post_anonymous_all"`
-						CanPostAnonymousMembers bool `json:"can_post_anonymous_members"`
-						ExpertAnswerCreate      bool `json:"expert_answer_create"`
-						ExpertAnswerEdit        bool `json:"expert_answer_edit"`
-						ExpertAnswerEndorse     bool `json:"expert_answer_endorse"`
-						FollowupEdit            bool `json:"followup_edit"`
-						ManageFolders           bool `json:"manage_folders"`
-						ManageGroupInfo         bool `json:"manage_group_info"`
-						ManageGroups            bool `json:"manage_groups"`
-						ManageResources         bool `json:"manage_resources"`
-						MemberAnswerCreate      bool `json:"member_answer_create"`
-						MemberAnswerEdit        bool `json:"member_answer_edit"`
-						MemberAnswerEndorse     bool `json:"member_answer_endorse"`
-						MemberRoster            bool `json:"member_roster"`
-						NewFollowup             bool `json:"new_followup"`
-						NewPost                 bool `json:"new_post"`
-						QuestionDelete          bool `json:"question_delete"`
-						QuestionEdit            bool `json:"question_edit"`
-					} `json:"admin"`
-					Instructor struct {
-						AdminRoster         bool `json:"admin_roster"`
-						ExpertAnswerCreate  bool `json:"expert_answer_create"`
-						ExpertAnswerEdit    bool `json:"expert_answer_edit"`
-						ExpertAnswerEndorse bool `json:"expert_answer_endorse"`
-						FollowupEdit        bool `json:"followup_edit"`
-						ManageFolders       bool `json:"manage_folders"`
-						ManageGroupInfo     bool `json:"manage_group_info"`
-						ManageGroups        bool `json:"manage_groups"`
-						ManageResources     bool `json:"manage_resources"`
-						MemberAnswerEdit    bool `json:"member_answer_edit"`
-						MemberAnswerEndorse bool `json:"member_answer_endorse"`
-						MemberRoster        bool `json:"member_roster"`
-						NewFollowup         bool `json:"new_followup"`
-						NewPost             bool `json:"new_post"`
-						QuestionDelete      bool `json:"question_delete"`
-						QuestionEdit        bool `json:"question_edit"`
-					} `json:"instructor"`
-					Professor struct {
-						AdminRoster         bool `json:"admin_roster"`
-						ExpertAnswerCreate  bool `json:"expert_answer_create"`
-						ExpertAnswerEdit    bool `json:"expert_answer_edit"`
-						ExpertAnswerEndorse bool `json:"expert_answer_endorse"`
-						FollowupEdit        bool `json:"followup_edit"`
-						ManageFolders       bool `json:"manage_folders"`
-						ManageGroupInfo     bool `json:"manage_group_info"`
-						ManageGroups        bool `json:"manage_groups"`
-						ManageResources     bool `json:"manage_resources"`
-						MemberAnswerEdit    bool `json:"member_answer_edit"`
-						MemberAnswerEndorse bool `json:"member_answer_endorse"`
-						MemberRoster        bool `json:"member_roster"`
-						NewFollowup         bool `json:"new_followup"`
-						NewPost             bool `json:"new_post"`
-						QuestionDelete      bool `json:"question_delete"`
-						QuestionEdit        bool `json:"question_edit"`
-					} `json:"professor"`
-					Student struct {
-						CanPostAnonymousMembers bool `json:"can_post_anonymous_members"`
-						ExpertAnswerEndorse     bool `json:"expert_answer_endorse"`
-						MemberAnswerCreate      bool `json:"member_answer_create"`
-						MemberAnswerEdit        bool `json:"member_answer_edit"`
-						MemberAnswerEndorse     bool `json:"member_answer_endorse"`
-						NewFollowup             bool `json:"new_followup"`
-						NewPost                 bool `json:"new_post"`
-						QuestionEdit            bool `json:"question_edit"`
-					} `json:"student"`
-					Ta struct {
-						AdminRoster         bool `json:"admin_roster"`
-						ExpertAnswerCreate  bool `json:"expert_answer_create"`
-						ExpertAnswerEdit    bool `json:"expert_answer_edit"`
-						ExpertAnswerEndorse bool `json:"expert_answer_endorse"`
-						FollowupEdit        bool `json:"followup_edit"`
-						ManageFolders       bool `json:"manage_folders"`
-						ManageGroupInfo     bool `json:"manage_group_info"`
-						ManageGroups        bool `json:"manage_groups"`
-						ManageResources     bool `json:"manage_resources"`
-						MemberAnswerEdit    bool `json:"member_answer_edit"`
-						MemberAnswerEndorse bool `json:"member_answer_endorse"`
-						MemberRoster        bool `json:"member_roster"`
-						NewFollowup         bool `json:"new_followup"`
-						NewPost             bool `json:"new_post"`
-						QuestionDelete      bool `json:"question_delete"`
-						QuestionEdit        bool `json:"question_edit"`
-					} `json:"ta"`
-				} `json:"roles"`
-				SeenMessage  []string `json:"seen_message"`
-				TipsTricksNr int      `json:"tips_tricks_nr"`
-			} `json:"config"`
-			CourseDescription  string         `json:"course_description"`
-			CourseNumber       string         `json:"course_number"`
-			CreatedAt          string         `json:"created_at"`
-			CreatorName        string         `json:"creator_name"`
-			Department         string         `json:"department"`
-			EndDate            interface{}    `json:"end_date"`
-			Enrollment         interface{}    `json:"enrollment"`
-			Folders            []string       `json:"folders"`
-			GeneralInformation []interface{}  `json:"general_information"`
-			ID                 string         `json:"id"`
-			IsOpen             bool           `json:"isOpen"`
-			MyName             string         `json:"my_name"`
-			Name               string         `json:"name"`
-			OfficeHours        struct{}       `json:"office_hours"`
-			PrivatePosts       string         `json:"private_posts"`
-			ProfHash           map[string]int `json:"prof_hash"`
-			Profs              []struct {
-				Admin           bool        `json:"admin"`
-				AdminPermission int         `json:"admin_permission"`
-				ClassSections   []string    `json:"class_sections"`
-				Email           string      `json:"email"`
-				FacebookID      interface{} `json:"facebook_id"`
-				ID              string      `json:"id"`
-				Name            string      `json:"name"`
-				Photo           interface{} `json:"photo"`
-				Role            string      `json:"role"`
-				Us              bool        `json:"us"`
-			} `json:"profs"`
-			School           string        `json:"school"`
-			SchoolEmails     string        `json:"school_emails"`
-			SchoolExt        string        `json:"school_ext"`
-			SchoolID         string        `json:"school_id"`
-			SchoolShort      string        `json:"school_short"`
-			ShortNumber      string        `json:"short_number"`
-			SpecialTags      []interface{} `json:"special_tags"`
-			StartDate        string        `json:"start_date"`
-			Status           string        `json:"status"`
-			Syllabus         string        `json:"syllabus"`
-			Taxonomy         []interface{} `json:"taxonomy"`
-			Term             string        `json:"term"`
-			Topics           []string      `json:"topics"`
-			TotalContentProf int           `json:"total_content_prof"`
-			TotalContentStud int           `json:"total_content_stud"`
-			Type             string        `json:"type"`
-			UserCount        int           `json:"user_count"`
-		} `json:"networks"`
+		ID            string         `json:"id"`
+		LastContent   struct{}       `json:"last_content"`
+		LastNetwork   string         `json:"last_network"`
+		Name          string         `json:"name"`
+		Networks      []Network      `json:"networks"`
 		NewQuestions  map[string]int `json:"new_questions"`
 		Photo         string         `json:"photo"`
 		PhotoOriginal string         `json:"photo_original"`
@@ -574,7 +589,7 @@ type FeedResponse struct {
 			NumFavorites      int      `json:"num_favorites"`
 			RequestInstructor int      `json:"request_instructor"`
 			Rq                int      `json:"rq"`
-			Score             int      `json:"score"`
+			Score             float64  `json:"score"`
 			Status            string   `json:"status"`
 			Subject           string   `json:"subject"`
 			Tags              []string `json:"tags"`

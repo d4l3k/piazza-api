@@ -3,6 +3,8 @@ package piazza
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"net/url"
 	"sort"
 	"strings"
@@ -13,12 +15,16 @@ import (
 
 // HTMLWrapper returns a new HTMLWrapper
 func (c *Client) HTMLWrapper() *HTMLWrapper {
-	return &HTMLWrapper{c}
+	return &HTMLWrapper{
+		c:        c,
+		networks: map[string]Network{},
+	}
 }
 
 // HTMLWrapper is wrapper on top of Client that wraps all results with HTML.
 type HTMLWrapper struct {
-	c *Client
+	c        *Client
+	networks map[string]Network
 }
 
 // PiazzaScheme is the fake URL scheme for Piazza. It's in the format of:
@@ -41,7 +47,12 @@ func (w *HTMLWrapper) Get(uri string) (string, error) {
 			return "", err
 		}
 		var classes []string
-		for classID := range status.Result.Config.EmailPrefs {
+		for _, network := range status.Result.Networks {
+			classID := network.ID
+			if len(classID) == 0 {
+				continue
+			}
+			w.networks[classID] = network
 			url := fmt.Sprintf("%s://%s", PiazzaScheme, classID)
 			classes = append(classes, url)
 		}
@@ -50,16 +61,39 @@ func (w *HTMLWrapper) Get(uri string) (string, error) {
 	}
 
 	if u.Host != "" && len(u.Path) <= 1 {
+		network, ok := w.networks[u.Host]
+		if !ok {
+			return "", errors.New("need to fetch piazza:// before this")
+		}
+		req, err := http.NewRequest("GET", network.ResourceURL(), nil)
+		if err != nil {
+			return "", err
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return "", err
+		}
+		defer resp.Body.Close()
+		resources, _ := ioutil.ReadAll(resp.Body)
 		feed, err := w.c.Feed(u.Host)
 		if err != nil {
 			return "", err
 		}
-		var posts []string
-		for _, post := range feed.Result.Feed {
-			url := fmt.Sprintf("%s://%s/%s", PiazzaScheme, u.Host, post.ID)
-			posts = append(posts, url)
+		links := xurls.Strict.FindAllString(string(resources), -1)
+		// This matches urls in the form "\nhttp://...." and we need to strip the n.
+		for i, link := range links {
+			if strings.HasPrefix(link, "nhttp") {
+				links[i] = link[1:]
+			}
 		}
-		return urlsToHTML(posts), nil
+		for _, post := range feed.Result.Feed {
+			if len(post.ID) == 0 {
+				continue
+			}
+			url := fmt.Sprintf("%s://%s/%s", PiazzaScheme, u.Host, post.ID)
+			links = append(links, url)
+		}
+		return string(resources) + urlsToHTML(links), nil
 	}
 
 	contentID := u.Path
