@@ -539,6 +539,149 @@ func (c *Client) OptOutOfEmails() error {
 	return nil
 }
 
+type feedReq struct {
+	Limit  int    `json:"limit"`
+	Nid    string `json:"nid"`
+	Offset int    `json:"offset"`
+	Sort   string `json:"sort"`
+}
+
+// FeedResponse is what "network.get_my_feed" returns.
+type FeedResponse struct {
+	Aid    string      `json:"aid"`
+	Error  interface{} `json:"error"`
+	Result struct {
+		Draft struct{} `json:"draft"`
+		Feed  []struct {
+			BucketName    string   `json:"bucket_name"`
+			BucketOrder   int      `json:"bucket_order"`
+			ContentSnipet string   `json:"content_snipet"`
+			Fol           string   `json:"fol"`
+			Folders       []string `json:"folders"`
+			Gd            int      `json:"gd"`
+			ID            string   `json:"id"`
+			IsNew         bool     `json:"is_new"`
+			Log           []struct {
+				N string `json:"n"`
+				T string `json:"t"`
+				U string `json:"u"`
+			} `json:"log"`
+			M                 int      `json:"m"`
+			MainVersion       int      `json:"main_version"`
+			Modified          string   `json:"modified"`
+			NoAnswerFollowup  int      `json:"no_answer_followup"`
+			Nr                int      `json:"nr"`
+			NumFavorites      int      `json:"num_favorites"`
+			RequestInstructor int      `json:"request_instructor"`
+			Rq                int      `json:"rq"`
+			Score             int      `json:"score"`
+			Status            string   `json:"status"`
+			Subject           string   `json:"subject"`
+			Tags              []string `json:"tags"`
+			Type              string   `json:"type"`
+			UniqueViews       int      `json:"unique_views"`
+			Updated           string   `json:"updated"`
+			ViewAdjust        int      `json:"view_adjust"`
+		} `json:"feed"`
+		More      bool   `json:"more"`
+		Sort      string `json:"sort"`
+		T         int    `json:"t"`
+		TokenData struct {
+			ChannelIds []string `json:"channel_ids"`
+			Signature  string   `json:"signature"`
+			Timestamp  int      `json:"timestamp"`
+		} `json:"token_data"`
+	} `json:"result"`
+}
+
+// Feed requests all feed elements for a class.
+func (c *Client) Feed(class string) (FeedResponse, error) {
+	req := feedReq{Limit: 1000000, Offset: 0, Sort: "updated", Nid: class}
+	var resp FeedResponse
+	if err := c.MakeAPIReq("network.get_my_feed", req, &resp); err != nil {
+		return FeedResponse{}, err
+	}
+	return resp, nil
+}
+
+type Post struct {
+	Bookmarked  int    `json:"bookmarked"`
+	BucketName  string `json:"bucket_name"`
+	BucketOrder int    `json:"bucket_order"`
+	ChangeLog   []struct {
+		Anon string `json:"anon"`
+		Data string `json:"data"`
+		Type string `json:"type"`
+		UID  string `json:"uid"`
+		When string `json:"when"`
+	} `json:"change_log"`
+	Children []Post   `json:"children"`
+	Config   struct{} `json:"config"`
+	Created  string   `json:"created"`
+	Data     struct {
+		EmbedLinks []interface{} `json:"embed_links"`
+	} `json:"data"`
+	DefaultAnonymity string   `json:"default_anonymity"`
+	Folders          []string `json:"folders"`
+	History          []struct {
+		Anon    string `json:"anon"`
+		Content string `json:"content"`
+		Created string `json:"created"`
+		Subject string `json:"subject"`
+		UID     string `json:"uid"`
+	} `json:"history"`
+	IEdits              []interface{} `json:"i_edits"`
+	ID                  string        `json:"id"`
+	IsBookmarked        bool          `json:"is_bookmarked"`
+	IsTagGood           bool          `json:"is_tag_good"`
+	MyFavorite          bool          `json:"my_favorite"`
+	NoAnswer            int           `json:"no_answer"`
+	NoAnswerFollowup    int           `json:"no_answer_followup"`
+	Nr                  int           `json:"nr"`
+	NumFavorites        int           `json:"num_favorites"`
+	QEdits              []interface{} `json:"q_edits"`
+	RequestInstructor   int           `json:"request_instructor"`
+	RequestInstructorMe bool          `json:"request_instructor_me"`
+	SEdits              []interface{} `json:"s_edits"`
+	Status              string        `json:"status"`
+	T                   int           `json:"t"`
+	TagGood             []struct {
+		Admin      bool        `json:"admin"`
+		FacebookID interface{} `json:"facebook_id"`
+		ID         string      `json:"id"`
+		Name       string      `json:"name"`
+		Photo      interface{} `json:"photo"`
+		Role       string      `json:"role"`
+		Us         bool        `json:"us"`
+	} `json:"tag_good"`
+	TagGoodArr  []string      `json:"tag_good_arr"`
+	Tags        []string      `json:"tags"`
+	Type        string        `json:"type"`
+	UniqueViews int           `json:"unique_views"`
+	UpvoteIds   []interface{} `json:"upvote_ids"`
+}
+
+type contentGetResponse struct {
+	Aid    string      `json:"aid"`
+	Error  interface{} `json:"error"`
+	Result Post        `json:"result"`
+}
+
+type contentGetReq struct {
+	Cid string `json:"cid"`
+	Nid string `json:"nid"`
+}
+
+// Content returns a piece of content for a class.
+func (c *Client) Content(classID, contentID string) (Post, error) {
+	req := contentGetReq{Nid: classID, Cid: contentID}
+	var resp contentGetResponse
+	if err := c.MakeAPIReq("content.get", req, &resp); err != nil {
+		return Post{}, err
+	}
+	return resp.Result, nil
+}
+
 // Cookies returns the cookies for the Piazza client.
 func (c *Client) Cookies() []*http.Cookie {
 	return c.bow.SiteCookies()
