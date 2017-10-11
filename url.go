@@ -9,8 +9,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/mvdan/xurls"
 	"github.com/pkg/errors"
+	"mvdan.cc/xurls"
 )
 
 // HTMLWrapper returns a new HTMLWrapper
@@ -30,6 +30,8 @@ type HTMLWrapper struct {
 // PiazzaScheme is the fake URL scheme for Piazza. It's in the format of:
 // "piazza://classID/contentID"
 const PiazzaScheme = "piazza"
+
+var urlRegexp = xurls.Strict()
 
 // Get makes a request to Piazza.
 func (w *HTMLWrapper) Get(uri string) (string, error) {
@@ -79,7 +81,7 @@ func (w *HTMLWrapper) Get(uri string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		links := xurls.Strict.FindAllString(string(resources), -1)
+		links := urlRegexp.FindAllString(string(resources), -1)
 		// This matches urls in the form "\nhttp://...." and we need to strip the n.
 		for i, link := range links {
 			if strings.HasPrefix(link, "nhttp") {
@@ -110,7 +112,7 @@ func (w *HTMLWrapper) Get(uri string) (string, error) {
 	for _, p := range allChildrenPosts(post) {
 		for _, h := range p.History {
 			buf.WriteString(h.Content)
-			urls := xurls.Strict.FindAllString(h.Content, -1)
+			urls := urlRegexp.FindAllString(h.Content, -1)
 			buf.WriteString(urlsToHTML(urls))
 		}
 	}
